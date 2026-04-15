@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Routine</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0a0a0f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Daily Routine">
+<link rel="apple-touch-icon" href="icon-192.png">
+<!-- 🔧修正: フォントをキャッシュ可能にするためpreconnect追加 -->
+<link rel="preconnect" href="<https://fonts.googleapis.com>">
+<link rel="preconnect" href="<https://fonts.gstatic.com>" crossorigin>
+<link href="<https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;600;800&family=Space+Mono:wght@400;700&display=swap>" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --card: #12121a;
+    --card-border: #1e1e2e;
+    --accent: #4ade80;
+    --accent-dim: #0e1a12;
+    --text: #ffffff;
+    --text-sub: #c4c4cc;
+    --text-dim: #a1a1aa;
+    --text-muted: #71717a;
+    --morning: #fbbf24;
+    --morning-dim: #1f1a0e;
+    --work: #60a5fa;
+    --work-dim: #0e1520;
+    --invest: #c084fc;
+    --invest-dim: #18102a;
+    --with: #f472b6;
+    --with-dim: #1f0e1a;
+    --cool: #22d3ee;
+    --cool-dim: #0e1a1f;
+    --sleep: #6366f1;
+    --sleep-dim: #101028;
+    --body: #f97316;
+    --body-dim: #1f1208;
+    --asset: #34d399;
+    --asset-dim: #081a12;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  /* 🔧修正: オフライン時のフォントフォールバック強化 */
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    /* 🔧修正: iOS PWAでのラバーバンド対策 */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .container { max-width: 720px; margin: 0 auto; padding: 40px 20px 80px; }
+
+  /* 🔧修正: iPhoneのノッチ対応 */
+  @supports (padding-top: env(safe-area-inset-top)) {
+    .container {
+      padding-top: calc(40px + env(safe-area-inset-top));
+      padding-bottom: calc(80px + env(safe-area-inset-bottom));
+      padding-left: calc(20px + env(safe-area-inset-left));
+      padding-right: calc(20px + env(safe-area-inset-right));
+    }
+  }
+
+  .header { text-align: center; margin-bottom: 48px; animation: fadeUp 0.8s ease both; }
+  .header-label { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 4px; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; display: block; }
+  .header h1 { font-size: 32px; font-weight: 800; letter-spacing: -0.5px; line-height: 1.3; color: var(--accent); }
+  .header-sub { font-size: 14px; color: var(--text-dim); margin-top: 10px; font-weight: 400; }
+
+  .date-bar {
+    text-align: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 8px;
+  }
+
+  .notify-btn {
+    display: block;
+    margin: 16px auto 0;
+    padding: 10px 24px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(74,222,128,0.3);
+    border-radius: 100px;
+    color: var(--accent);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: background 0.2s;
+    /* 🔧修正: タッチフィードバック改善 */
+    -webkit-tap-highlight-color: transparent;
+  }
+  .notify-btn:hover { background: rgba(74,222,128,0.15); }
+  .notify-btn:active { background: rgba(74,222,128,0.25); }
+  .notify-btn.active { background: rgba(74,222,128,0.2); border-color: var(--accent); }
+
+  .reset-btn {
+    display: block;
+    margin: 8px auto 0;
+    padding: 8px 20px;
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 100px;
+    color: var(--text-muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .reset-btn:hover { border-color: rgba(255,255,255,0.25); color: var(--text-dim); }
+
+  .principles { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 48px; animation: fadeUp 0.8s ease 0.15s both; }
+  .principle { background: var(--card); border: 1px solid var(--card-border); border-radius: 12px; padding: 16px 14px; text-align: center; }
+  .principle-icon { font-size: 22px; margin-bottom: 8px; }
+  .principle-text { font-size: 12px; font-weight: 600; line-height: 1.5; color: var(--text); }
+
+  .section-label { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); margin-bottom: 20px; margin-top: 48px; padding-left: 28px; animation: fadeUp 0.6s ease both; }
+
+  .timeline { position: relative; padding-left: 28px; }
+  .timeline::before { content: ''; position: absolute; left: 6px; top: 16px; bottom: 16px; width: 1px; background: linear-gradient(180deg, var(--morning) 0%, var(--work) 22%, var(--body) 38%, var(--cool) 52%, var(--invest) 64%, var(--with) 78%, var(--sleep) 100%); opacity: 0.4; }
+
+  .block { position: relative; margin-bottom: 16px; animation: fadeUp 0.6s ease both; }
+  .block:nth-child(1)  { animation-delay: 0.20s; }
+  .block:nth-child(2)  { animation-delay: 0.27s; }
+  .block:nth-child(3)  { animation-delay: 0.34s; }
+  .block:nth-child(4)  { animation-delay: 0.40s; }
+  .block:nth-child(5)  { animation-delay: 0.46s; }
+  .block:nth-child(6)  { animation-delay: 0.52s; }
+  .block:nth-child(7)  { animation-delay: 0.58s; }
+  .block:nth-child(8)  { animation-delay: 0.64s; }
+  .block:nth-child(9)  { animation-delay: 0.70s; }
+  .block:nth-child(10) { animation-delay: 0.76s; }
+
+  .block-dot { position: absolute; left: -25px; top: 20px; width: 13px; height: 13px; border-radius: 50%; border: 2px solid; }
+  .block-card { border-radius: 14px; padding: 20px; border: 1px solid var(--card-border); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+  .block-card:hover { transform: translateY(-2px); }
+  .block-time { font-family: 'Space Mono', monospace; font-size: 12px; font-weight: 700; margin-bottom: 6px; letter-spacing: 1px; }
+  .block-title { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
+  .block-desc { font-size: 13px; color: var(--text-sub); line-height: 1.8; font-weight: 400; }
+  .block-tag { display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; padding: 3px 10px; border-radius: 100px; margin-top: 10px; }
+
+  .jobs-badge { display: flex; align-items: flex-start; gap: 8px; margin-top: 12px; padding: 10px 12px; border-radius: 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
+  .jobs-badge-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  .jobs-badge-text { font-size: 11px; color: var(--text-dim); line-height: 1.6; font-style: italic; }
+  .jobs-badge-text strong { color: var(--text-sub); font-style: normal; }
+
+  .block--morning .block-dot { border-color: var(--morning); background: var(--morning-dim); }
+  .block--morning .block-card { background: var(--morning-dim); border-color: rgba(251,191,36,0.2); }
+  .block--morning .block-time { color: var(--morning); }
+  .block--morning .block-tag { background: rgba(251,191,36,0.15); color: var(--morning); }
+  .block--morning .block-card:hover { box-shadow: 0 8px 30px rgba(251,191,36,0.08); }
+
+  .block--work .block-dot { border-color: var(--work); background: var(--work-dim); }
+  .block--work .block-card { background: var(--work-dim); border-color: rgba(96,165,250,0.2); }
+  .block--work .block-time { color: var(--work); }
+  .block--work .block-tag { background: rgba(96,165,250,0.15); color: var(--work); }
+  .block--work .block-card:hover { box-shadow: 0 8px 30px rgba(96,165,250,0.08); }
+
+  .block--body .block-dot { border-color: var(--body); background: var(--body-dim); }
+  .block--body .block-card { background: var(--body-dim); border-color: rgba(249,115,22,0.2); }
+  .block--body .block-time { color: var(--body); }
+  .block--body .block-tag { background: rgba(249,115,22,0.15); color: var(--body); }
+  .block--body .block-card:hover { box-shadow: 0 8px 30px rgba(249,115,22,0.08); }
+
+  .block--cool .block-dot { border-color: var(--cool); background: var(--cool-dim); }
+  .block--cool .block-card { background: var(--cool-dim); border-color: rgba(34,211,238,0.2); }
+  .block--cool .block-time { color: var(--cool); }
+  .block--cool .block-tag { background: rgba(34,211,238,0.15); color: var(--cool); }
+  .block--cool .block-card:hover { box-shadow: 0 8px 30px rgba(34,211,238,0.08); }
+
+  .block--invest .block-dot { border-color: var(--invest); background: var(--invest-dim); }
+  .block--invest .block-card { background: var(--invest-dim); border-color: rgba(192,132,252,0.2); }
+  .block--invest .block-time { color: var(--invest); }
+  .block--invest .block-tag { background: rgba(192,132,252,0.15); color: var(--invest); }
+  .block--invest .block-card:hover { box-shadow: 0 8px 30px rgba(192,132,252,0.08); }
+
+  .block--with .block-dot { border-color: var(--with); background: var(--with-dim); }
+  .block--with .block-card { background: var(--with-dim); border-color: rgba(244,114,182,0.2); }
+  .block--with .block-time { color: var(--with); }
+  .block--with .block-tag { background: rgba(244,114,182,0.15); color: var(--with); }
+  .block--with .block-card:hover { box-shadow: 0 8px 30px rgba(244,114,182,0.08); }
+
+  .block--sleep .block-dot { border-color: var(--sleep); background: var(--sleep-dim); }
+  .block--sleep .block-card { background: var(--sleep-dim); border-color: rgba(99,102,241,0.2); }
+  .block--sleep .block-time { color: var(--sleep); }
+  .block--sleep .block-tag { background: rgba(99,102,241,0.15); color: var(--sleep); }
+  .block--sleep .block-card:hover { box-shadow: 0 8px 30px rgba(99,102,241,0.08); }
+
+  .morning-check { margin-top: 14px; display: flex; flex-direction: column; gap: 7px; }
+  .check-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; background: rgba(251,191,36,0.06); border: 1px solid rgba(251,191,36,0.12); cursor: pointer; transition: background 0.15s; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .check-item:hover { background: rgba(251,191,36,0.1); }
+  .check-item.done { background: rgba(251,191,36,0.14); border-color: rgba(251,191,36,0.3); }
+  .check-box { width: 18px; height: 18px; border-radius: 5px; border: 2px solid rgba(251,191,36,0.4); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; transition: background 0.15s, border-color 0.15s; }
+  .check-item.done .check-box { background: var(--morning); border-color: var(--morning); color: #000; }
+  .check-label { font-size: 12px; color: var(--text-sub); flex: 1; line-height: 1.4; }
+  .check-item.done .check-label { color: var(--morning); font-weight: 600; }
+
+  .body-menu { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .body-item { background: rgba(249,115,22,0.07); border: 1px solid rgba(249,115,22,0.15); border-radius: 10px; padding: 10px; cursor: pointer; text-align: center; transition: background 0.15s, border-color 0.15s, transform 0.15s; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .body-item:hover { background: rgba(249,115,22,0.13); border-color: rgba(249,115,22,0.32); transform: translateY(-1px); }
+  .body-item.selected { background: rgba(249,115,22,0.2); border-color: var(--body); box-shadow: 0 0 10px rgba(249,115,22,0.18); }
+  .body-item-icon { font-size: 20px; margin-bottom: 4px; }
+  .body-item-name { font-size: 11px; font-weight: 700; color: var(--body); }
+  .body-item-time { font-size: 10px; color: var(--text-dim); margin-top: 2px; font-family: 'Space Mono', monospace; }
+
+  .bath-check { margin-top: 14px; display: flex; flex-direction: column; gap: 7px; }
+  .bath-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; background: rgba(34,211,238,0.04); border: 1px solid rgba(34,211,238,0.1); cursor: pointer; transition: background 0.15s; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .bath-item:hover { background: rgba(34,211,238,0.08); }
+  .bath-item.done { background: rgba(34,211,238,0.12); border-color: rgba(34,211,238,0.28); }
+  .bath-box { width: 18px; height: 18px; border-radius: 5px; border: 2px solid rgba(34,211,238,0.35); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; transition: background 0.15s, border-color 0.15s; }
+  .bath-item.done .bath-box { background: var(--cool); border-color: var(--cool); color: #000; }
+  .bath-label { font-size: 12px; color: var(--text-sub); flex: 1; line-height: 1.4; }
+  .bath-item.done .bath-label { color: var(--cool); font-weight: 600; }
+
+  .invest-menu { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .invest-item { background: rgba(192,132,252,0.07); border: 1px solid rgba(192,132,252,0.18); border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.15s; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .invest-item:hover { background: rgba(192,132,252,0.14); border-color: rgba(192,132,252,0.35); transform: translateY(-1px); }
+  .invest-item.selected { background: rgba(192,132,252,0.22); border-color: var(--invest); box-shadow: 0 0 12px rgba(192,132,252,0.2); }
+  .invest-item-icon { font-size: 18px; margin-bottom: 4px; }
+  .invest-item-name { font-size: 12px; font-weight: 700; color: var(--invest); }
+  .invest-item-sub { font-size: 10px; color: var(--text-dim); margin-top: 2px; line-height: 1.4; }
+  .invest-declare { margin-top: 10px; padding: 10px 14px; border-radius: 8px; background: rgba(192,132,252,0.12); border: 1px solid rgba(192,132,252,0.3); font-size: 12px; font-family: 'Space Mono', monospace; color: var(--invest); text-align: center; min-height: 36px; display: flex; align-items: center; justify-content: center; }
+
+  .with-selector { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .with-option { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 10px; background: rgba(244,114,182,0.06); border: 1px solid rgba(244,114,182,0.15); cursor: pointer; transition: background 0.15s, border-color 0.15s, transform 0.15s; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .with-option:hover { background: rgba(244,114,182,0.12); border-color: rgba(244,114,182,0.3); transform: translateX(3px); }
+  .with-option.selected { background: rgba(244,114,182,0.2); border-color: var(--with); box-shadow: 0 0 12px rgba(244,114,182,0.15); }
+  .with-option-icon { font-size: 22px; flex-shrink: 0; }
+  .with-option-body { flex: 1; }
+  .with-option-name { font-size: 13px; font-weight: 700; color: var(--with); }
+  .with-option-desc { font-size: 11px; color: var(--text-dim); margin-top: 2px; line-height: 1.4; }
+  .with-option-time { font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700; color: var(--with); background: rgba(244,114,182,0.12); padding: 3px 8px; border-radius: 6px; flex-shrink: 0; }
+  .with-option.selected .with-option-time { background: rgba(244,114,182,0.25); }
+  .with-result { margin-top: 8px; padding: 8px 14px; border-radius: 8px; background: rgba(244,114,182,0.08); border: 1px solid rgba(244,114,182,0.18); font-size: 11px; font-family: 'Space Mono', monospace; color: var(--with); text-align: center; min-height: 32px; display: flex; align-items: center; justify-content: center; }
+
+  .cool-check { margin-top: 14px; display: flex; flex-direction: column; gap: 7px; }
+  .cool-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; background: rgba(99,102,241,0.05); border: 1px solid rgba(99,102,241,0.12); cursor: pointer; transition: background 0.15s; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .cool-item:hover { background: rgba(99,102,241,0.1); }
+  .cool-item.done { background: rgba(99,102,241,0.14); border-color: rgba(99,102,241,0.3); }
+  .cool-box { width: 18px; height: 18px; border-radius: 5px; border: 2px solid rgba(99,102,241,0.4); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; transition: background 0.15s, border-color 0.15s; }
+  .cool-item.done .cool-box { background: var(--sleep); border-color: var(--sleep); color: #fff; }
+  .cool-label { font-size: 12px; color: var(--text-sub); flex: 1; line-height: 1.4; }
+  .cool-item.done .cool-label { color: #a5b4fc; font-weight: 600; }
+
+  .rule-box { background: var(--accent-dim); border: 1px solid rgba(74,222,128,0.2); border-radius: 14px; padding: 24px; margin-top: 16px; }
+  .rule-box-title { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 3px; color: var(--accent); text-transform: uppercase; margin-bottom: 14px; }
+  .rule-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; font-size: 13px; line-height: 1.6; color: var(--text-sub); }
+  .rule-item:last-child { margin-bottom: 0; }
+  .rule-num { font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700; color: var(--accent); background: rgba(74,222,128,0.12); width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 6px; flex-shrink: 0; margin-top: 1px; }
+  .rule-item strong { font-weight: 600; color: var(--accent); }
+
+  .asset-box { background: var(--asset-dim); border: 1px solid rgba(52,211,153,0.2); border-radius: 14px; padding: 24px; margin-top: 16px; }
+  .asset-box-title { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 3px; color: var(--asset); text-transform: uppercase; margin-bottom: 14px; }
+  .asset-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; font-size: 13px; line-height: 1.6; color: var(--text-sub); }
+  .asset-item:last-child { margin-bottom: 0; }
+  .asset-num { font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700; color: var(--asset); background: rgba(52,211,153,0.12); width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 6px; flex-shrink: 0; margin-top: 1px; }
+  .asset-item strong { font-weight: 600; color: var(--asset); }
+
+  .uniform-box { background: #1a1510; border: 1px solid rgba(251,191,36,0.2); border-radius: 14px; padding: 24px; margin-top: 16px; }
+  .uniform-title { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 3px; color: var(--morning); text-transform: uppercase; margin-bottom: 14px; }
+  .uniform-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; font-size: 13px; line-height: 1.6; color: var(--text-sub); }
+  .uniform-item:last-child { margin-bottom: 0; }
+  .uniform-num { font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700; color: var(--morning); background: rgba(251,191,36,0.15); width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 6px; flex-shrink: 0; margin-top: 1px; }
+  .uniform-item strong { font-weight: 600; color: var(--morning); }
+
+  .clean-box { background: #0f1a1a; border: 1px solid rgba(34,211,238,0.2); border-radius: 14px; padding: 24px; margin-top: 16px; }
+  .clean-box-title { font-family: 'Space Mono', monospace; font-size: 11px; letter-spacing: 3px; color: var(--cool); text-transform: uppercase; margin-bottom: 14px; }
+  .clean-area-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .clean-area-item { background: rgba(34,211,238,0.05); border: 1px solid rgba(34,211,238,0.12); border-radius: 10px; padding: 10px 12px; cursor: pointer; text-align: center; transition: background 0.15s, border-color 0.15s, transform 0.15s; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .clean-area-item:hover { background: rgba(34,211,238,0.1); border-color: rgba(34,211,238,0.28); transform: translateY(-1px); }
+  .clean-area-item.selected { background: rgba(34,211,238,0.18); border-color: var(--cool); box-shadow: 0 0 10px rgba(34,211,238,0.15); }
+  .clean-area-icon { font-size: 20px; margin-bottom: 4px; }
+  .clean-area-name { font-size: 12px; font-weight: 700; color: var(--cool); }
+  .clean-area-time { font-size: 10px; color: var(--text-dim); margin-top: 2px; font-family: 'Space Mono', monospace; }
+  .clean-declare { margin-bottom: 16px; padding: 9px 14px; border-radius: 8px; background: rgba(34,211,238,0.08); border: 1px solid rgba(34,211,238,0.2); font-size: 11px; font-family: 'Space Mono', monospace; color: var(--cool); text-align: center; min-height: 32px; display: flex; align-items: center; justify-content: center; }
+  .clean-rule { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }
+  .clean-rule-item { display: flex; align-items: flex-start; gap: 10px; padding: 9px 12px; border-radius: 8px; background: rgba(34,211,238,0.04); border: 1px solid rgba(34,211,238,0.08); font-size: 12px; color: var(--text-sub); line-height: 1.5; }
+  .clean-rule-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  .tsuide-list { display: flex; flex-direction: column; gap: 6px; }
+  .tsuide-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; background: rgba(34,211,238,0.04); border: 1px solid rgba(34,211,238,0.08); cursor: pointer; transition: background 0.15s; user-select: none; -webkit-tap-highlight-color: transparent; }
+  .tsuide-item:hover { background: rgba(34,211,238,0.09); }
+  .tsuide-item.done { background: rgba(34,211,238,0.13); border-color: rgba(34,211,238,0.25); }
+  .tsuide-box { width: 16px; height: 16px; border-radius: 4px; border: 2px solid rgba(34,211,238,0.3); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; transition: background 0.15s, border-color 0.15s; }
+  .tsuide-item.done .tsuide-box { background: var(--cool); border-color: var(--cool); color: #000; }
+  .tsuide-label { font-size: 12px; color: var(--text-sub); flex: 1; line-height: 1.4; }
+  .tsuide-item.done .tsuide-label { color: var(--cool); font-weight: 600; }
+
+  .footer { text-align: center; margin-top: 48px; font-size: 12px; color: var(--text-muted); font-weight: 400; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 500px) {
+    .container { padding: 28px 16px 60px; }
+    .header h1 { font-size: 24px; }
+    .principles { grid-template-columns: 1fr; gap: 8px; }
+    .block-title { font-size: 16px; }
+    .body-menu { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <span class="header-label">Daily Routine</span>
+    <h1>1日の設計図</h1>
+    <p class="header-sub">シンプルに。迷わない。徹底する。</p>
+    <div class="date-bar" id="dateBar"></div>
+    <button class="notify-btn" id="notifyBtn" onclick="requestNotify()">🔔 通知をONにする</button>
+    <button class="reset-btn" onclick="resetAll()">🔄 今日のチェックをリセット</button>
+  </div>
+
+  <div class="principles">
+    <div class="principle"><div class="principle-icon">🧘</div><div class="principle-text">朝は<br>消耗しない</div></div>
+    <div class="principle"><div class="principle-icon">🎯</div><div class="principle-text">座る前に<br>1つ決める</div></div>
+    <div class="principle"><div class="principle-icon">🔋</div><div class="principle-text">睡眠7h<br>死守</div></div>
+  </div>
+
+  <div class="section-label">Timeline</div>
+
+  <div class="timeline">
+
+    <div class="block block--morning">
+      <div class="block-dot"></div>
+      <div class="block-card">
+        <div class="block-time">06:00 – 06:30</div>
+        <div class="block-title">☀️ 余白の30分</div>
+        <div class="block-desc">何もしなくていい時間。コーヒー、ぼーっとする、<br>Slackに届いたn8nのニュースダイジェストを眺める。<br>ルールは1つだけ：「準備以外のことに使う」</div>
+        <div class="jobs-badge">
+          <span class="jobs-badge-icon">🪞</span>
+          <span class="jobs-badge-text"><strong>Jobs式：鏡の問いかけ</strong><br>「今日が最後の日だとしたら、今日やることは本当にやりたいことか？」NOが続いたら何かを変えるサイン。</span>
+        </div>
+        <span class="block-tag">判断ゼロ・消耗しない朝</span>
+      </div>
+    </div>
+
+    <div class="block block--morning">
+      <div class="block-dot"></div>
+      <div class="block-card">
+        <div class="block-time">06:30 – 07:00</div>
+        <div class="block-title">🚗 準備 → 出発</div>
+        <div class="block-desc">
+          通勤着は「制服化」済み。迷いゼロで着替えて出るだけ。<br>
+          <strong style="color:var(--morning);">朝食：ゆで卵 + おにぎり（固定）</strong><br>
+          <span style="color:var(--text-dim);">→ 前夜作り置き＋冷凍ストック。判断ゼロ。</span>
+        </div>
+        <div class="morning-check">
+          <div class="check-item" data-key="check_0" onclick="toggleCheck(this)"><div class="check-box"></div><span class="check-label">👕 制服に着替える（考えない）</span></div>
+          <div class="check-item" data-key="check_1" onclick="toggleCheck(this)"><div class="check-box"></div><span class="check-label">🥚 ゆで卵 + おにぎりを食べる</span></div>
+          <div class="check-item" data-key="check_2" onclick="toggleCheck(this)"><div class="check-box"></div><span class="check-label">🎒 カバン・財布・鍵の確認</span></div>
+        </div>
+        <div class="jobs-badge" style="margin-top:12px;">
+          <span class="jobs-badge-icon">👕</span>
+          <span class="jobs-badge-text"><strong>Jobs式：服の固定</strong><br>黒タートルネック+ジーンズを毎日着用。服選びの判断を排除し、意思決定エネルギーを温存。</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="block block--work">
+      <div class="block-dot"></div>
+      <div class="block-card">
+        <div class="block-time">07:00 – 18:30</div>
+        <div class="block-title">💼 仕事 → 帰宅</div>
+        <div class="block-desc">重要な判断（原価計算・複雑な処理）は午前中に集中配置。<br>午後は定型業務・調整系を回す。</div>
+        <span class="block-tag">エネルギー高い時間 → 重要タスク</span>
+      </div>
+    </div>
+
+    <div class="block block--morning">
+      <div class="block-dot"></div>
+      <div class="block-card">
+        <div class="block-time">18:30 – 19:00</div>
+        <div class="block-title">🍚 食事</div>
+        <div class="block-desc">
+          withの隙間チェックはこの時間でOK。<br>
+          <strong style="color:var(--morning);">ゆで卵を作り置き（翌朝分2〜3個）</strong><br>
+          <span style="color:var(--text-dim);">→ 鍋に入れて放置するだけ。翌朝の準備が消える。</span>
+        </div>
+        <span class="block-tag">食後30分は休憩。すぐ動かない</span>
+      </div>
+    </div>
+
+    <div class="block block--body">
+      <div class="block-dot"></div>
+      <div class="block-card">
+        <div class="block-time">19:00 – 19:30</div>
+        <div class="block-title">💪 筋トレ</div>
+        <div class="block-desc">1種目だけ選んでこなす。考えない。<br><span style="color:var(--text-dim);">このあと風呂で汗を流すので、べたつきゼロで終われる。</span></div>
+        <div class="body-menu">
+          <div class="body-item" data-key="body_select" data-val="プッシュアップ" onclick="selectBody(this)"><div class="body-item-icon">🏋️</div><div class="body-item-name">プッシュアップ</div><div class="body-item-time">3セット</div></div>
+          <div class="body-item" data-key="body_select" data-val="スクワット" onclick="selectBody(this)"><div class="body-item-icon">🦵</div><div class="body-item-name">スクワット</div><div class="body-item-time">3セット</div></div>
+          <div class="body-item" data-key="body_select" data-val="体幹プランク" onclick="selectBody(this)"><div class="body-item-icon">🧗</div><div class="body-item-name">体幹プランク</div><div class="body-item-time">1分×3</div></div>
+          <div class="body-item" data-key="body_select" data-val="夜ウォーク" onclick="selectBody(this)"><div class="body-item-icon">🚶</div><div class="body-item-name">夜ウォーク</div><div class="body-item-time">20〜30分</div></div>
+          <div class="body-item" data-key="body_select" data-val="軽いラン" onclick="selectBody(this)"><div class="body-item-icon">🏃</div><div class="body-item-name">軽いラン</div><div class="body-item-time">2〜3km</div></div>
+          <div class="body-item" data-key="body_select" data-val="オフ" onclick="selectBody(this)"><div class="body-item-icon">😴</div><div class="body-item-name">今日はオフ</div><div class="body-item-time">完全休養</div></div>
+        </div>
+        <span class="block-tag" style="margin-top:12px;">週4以上目標。量より継続</span>
+      </div>
+    </div>
+
+    <div class="block block--cool">
+      <div class="block-dot"></div>
+      <div class="block-card">
+        <div class="block-time">19:30 – 20:00</div>
+        <div class="block-title">🛁 風呂 → ケア（即）</div>
+        <div class="block-desc">風呂上がりは肌が一番水分を吸収するタイミング。<br>上がったら<strong style="color:var(--cool);">その場で完結</strong>させる。あとでやらない。</div>
+        <div class="bath-check">
+          <div class="bath-item" data-key="bath_0" onclick="toggleBath(this)"><div class="bath-box"></div><span class="bath-label">🚿 風呂・シャワー</span></div>
+          <div class="bath-item" data-key="bath_1" onclick="toggleBath(this)"><div class="bath-box"></div><span class="bath-label">💇 髪を乾かす（半乾きで寝ない）</span></div>
+          <div class="bath-item" data-key="bath_2" onclick="toggleBath(this)"><div class="bath-box"></div><span class="bath-label">💆 保湿（顔・体。上がってすぐが効果◎）</span></div>
+        </div>
+        <div style="margin-top:10px; padding:8px 12px; background:rgba(34,211,238,0.05); border-radius:8px; border:1px solid rgba(34,211,238,0.1); font-size:11px; color:var(--text-dim); line-height:1.6;">
+          💡 風呂上がり3分以内に保湿が最も効果的。ドライヤー → 保湿の順で体が冷める前に完結。
+        </div>
+        <span class="block-tag">「あとでやろう」を構造的に消す</span>
+      </div>
+    </div>
+
+    <div class="block block--invest">
+      <div class="block-dot"></div>
+      <div class="block-card">
+        <div class="block-time">20:00 – 21:00</div>
+        <div class="block-title">🔧 自己投資タイム</div>
+        <div class="block-desc">座る前に「今日はこれ」と<strong style="color:var(--invest);">1つ選んでから始める</strong>。<br>選ばずに座るとスマホで60分溶ける。</div>
+        <div class="invest-menu">
+          <div class="invest-item" data-key="invest_select" data-label="n8n・自動化を触る" onclick="selectInvest(this)"><div class="invest-item-icon">⚙️</div><div class="invest-item-name">n8n・自動化</div><div class="invest-item-sub">ワークフロー改善<br>新しいノード試す</div></div>
+          <div class="invest-item" data-key="invest_select" data-label="S13を調べる・パーツを探す" onclick="selectInvest(this)"><div class="invest-item-icon">🚗</div><div class="invest-item-name">S13</div><div class="invest-item-sub">パーツ調べ<br>ヤフオク監視</div></div>
+          <div class="invest-item" data-key="invest_select" data-label="資産管理・副業を進める" onclick="selectInvest(this)"><div class="invest-item-icon">📊</div><div class="invest-item-name">資産管理・副業</div><div class="invest-item-sub">収支確認<br>せどり・仕入れ研究</div></div>
+          <div class="invest-item" data-key="invest_select" data-label="マンション計画を調べる" onclick="selectInvest(this)"><div class="invest-item-icon">🏠</div><div class="invest-item-name">マンション計画</div><div class="invest-item-sub">豊橋物件リサーチ<br>資金計画更新</div></div>
+          <div class="invest-item" data-key="invest_select" data-label="スキルアップ・インプットをする" onclick="selectInvest(this)"><div class="invest-item-icon">📚</div><div class="invest-item-name">スキルアップ</div><div class="invest-item-sub">本・記事・動画<br>経理・IT学習</div></div>
+          <div class="invest-item" data-key="invest_select" data-label="今日は自由時間にする" onclick="selectInvest(this)"><div class="invest-item-icon">🎵</div><div class="invest-item-name">自由時間</div><div class="invest-item-sub">音楽・ドライブ<br>完全オフ</div></div>
+        </div>
+        <div class="invest-declare" id="investDeclare">↑ 今日やることを選んでから席に座る</div>
+      </div>
+    </div>
+
+    <div class="block block--with">
+      <div class="block-dot"></div>
+      <div class="block-card">
+        <div class="block-time">21:00 〜</div>
+        <div class="block-title">💬 with タイム</div>
+        <div class="block-desc">今日の気分で時間を決める。削った分は自分に返ってくる。</div>
+        <div class="with-selector">
+          <div class="with-option" data-key="with_select" data-val="60" onclick="selectWith(this, 60, '60分集中で運用する')">
+            <div class="with-option-icon">🔥</div>
+            <div class="with-option-body"><div class="with-option-name">今日は力入れる</div><div class="with-option-desc">返信・いいね・メッセージ充実させる</div></div>
+            <div class="with-option-time">60分</div>
+          </div>
+          <div class="with-option" data-key="with_select" data-val="30" onclick="selectWith(this, 30, '30分サクッと見る')">
+            <div class="with-option-icon">👍</div>
+            <div class="with-option-body"><div class="with-option-name">普通に見る</div><div class="with-option-desc">返信だけ返してあとはスルー</div></div>
+            <div class="with-option-time">30分</div>
+          </div>
+          <div class="with-option" data-key="with_select" data-val="0" onclick="selectWith(this, 0, '今日はスキップ。自己投資に全振り')">
+            <div class="with-option-icon">😴</div>
+            <div class="with-option-body"><div class="with-option-name">今日はいいや</div><div class="with-option-desc">スキップして自己投資・休息に回す</div></div>
+            <div class="with-option-time">0分</div>
+          </div>
+        </div>
+        <div class="with-result" id="withResult">↑ 今日の with モードを選ぶ</div>
+      </div>
+    </div>
+
+    <div class="block block--sleep">
+      <div class="block-dot"></div>
+      <div class="block-card">
+        <div class="block-time">22:00 – 22:30</div>
+        <div class="block-title">🌙 クールダウン</div>
+        <div class="block-desc">順番どおりやるだけ。考えない。</div>
+        <div class="cool-check">
+          <div class="cool-item" data-key="cool_0" onclick="toggleCool(this)"><div class="cool-box"></div><span class="cool-label">📅 明日やること1つ決める（メモするだけ）</span></div>
+          <div class="cool-item" data-key="cool_1" onclick="toggleCool(this)"><div class="cool-box"></div><span class="cool-label">☕ ホットミルク or ハーブティーを淹れる</span></div>
+          <div class="cool-item" data-key="cool_2" onclick="toggleCool(this)"><div class="cool-box"></div><span class="cool-label">🤸 ストレッチ5分（首・肩・腰）</span></div>
+          <div class="cool-item" data-key="cool_3" onclick="toggleCool(this)"><div class="cool-box"></div><span class="cool-label">📵 照明オレンジ + スマホ離脱 + ラジオON</span></div>
+        </div>
+        <div class="jobs-badge" style="margin-top:12px;">
+          <span class="jobs-badge-icon">🚶</span>
+          <span class="jobs-badge-text"><strong>Jobs式：散歩 & 瞑想</strong><br>ジョブズは散歩を思考の整理に使い、1日の終わりに瞑想でリセット。気が向いたらこの時間に。</span>
+        </div>
+        <span class="block-tag">翌日の質はここで決まる</span>
+      </div>
+    </div>
+
+    <div class="block block--sleep">
+      <div class="block-dot"></div>
+      <div class="block-card">
+        <div class="block-time">22:30 – 23:00</div>
+        <div class="block-title">😴 就寝</div>
+        <div class="block-desc">睡眠7時間確保。これが全ての土台。<br><span style="color:var(--text-dim);">眠れないときは呼吸法（4秒吸う→7秒止める→8秒吐く）× 3セット</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="section-label" style="margin-top:48px;">Rules</div>
+  <div class="rule-box">
+    <div class="rule-box-title">5 Rules</div>
+    <div class="rule-item"><span class="rule-num">1</span><span>自己投資は<strong>座る前にメニューを1つ選択</strong>してから始める。選ばずに座るとスマホで溶ける。</span></div>
+    <div class="rule-item"><span class="rule-num">2</span><span>withは<strong>毎日1時間やらなくていい</strong>。0・30・60分を気分で選ぶ。削った分は自分に返る。</span></div>
+    <div class="rule-item"><span class="rule-num">3</span><span>22:30以降は<strong>スマホ離脱</strong>。睡眠7hが全ての基盤。</span></div>
+    <div class="rule-item"><span class="rule-num">4</span><span>筋トレは<strong>風呂の前</strong>。風呂→ケアまで即完結。べたつかせない。</span></div>
+    <div class="rule-item"><span class="rule-num">5</span><span>髪・保湿は<strong>風呂上がり即</strong>が正解。「あとでやろう」を構造的に消す。</span></div>
+  </div>
+
+  <div class="section-label" style="margin-top:48px;">Weekly</div>
+  <div class="asset-box">
+    <div class="asset-box-title">📊 週次レビュー（日曜 or 月曜朝）</div>
+    <div class="asset-item"><span class="asset-num">1</span><span><strong>収支チェック</strong>：先週の支出を確認。浪費・削れる固定費がないか眺めるだけ。</span></div>
+    <div class="asset-item"><span class="asset-num">2</span><span><strong>副業進捗</strong>：せどり・パーツ転売の仕入れ候補リストを更新。1アクションだけ進める。</span></div>
+    <div class="asset-item"><span class="asset-num">3</span><span><strong>自動化チェック</strong>：n8nワークフローが正常動作しているか確認。改善点1つメモ。</span></div>
+    <div class="asset-item"><span class="asset-num">4</span><span><strong>来週の宣言</strong>：「今週は主に何をやるか」を1行だけ決める。</span></div>
+    <div style="margin-top:14px; padding-top:14px; border-top:1px solid rgba(52,211,153,0.12); font-size:12px; color:var(--text-dim); line-height:1.7;">
+      💡 所要時間：<span style="color:var(--asset); font-weight:600;">15〜30分</span>。「眺めて・1アクション・宣言」の3ステップで終わる。
+    </div>
+  </div>
+
+  <div class="section-label" style="margin-top:48px;">Weekend</div>
+  <div class="clean-box">
+    <div class="clean-box-title">🧹 掃除ルーティン（土日どちらか朝イチ 07:00〜08:00）</div>
+    <div style="font-size:12px; color:var(--text-dim); margin-bottom:14px; line-height:1.7;">
+      今週はどのエリアを片付ける？<strong style="color:var(--cool);">1つ選んで5分だけやる。</strong>それだけでいい。
+    </div>
+    <div class="clean-area-grid">
+      <div class="clean-area-item" onclick="selectCleanArea(this, '自分の部屋の床')"><div class="clean-area-icon">🧹</div><div class="clean-area-name">自分の部屋の床</div><div class="clean-area-time">掃除機 or クイックル</div></div>
+      <div class="clean-area-item" onclick="selectCleanArea(this, '机・棚の上')"><div class="clean-area-icon">🖥️</div><div class="clean-area-name">机・棚の上</div><div class="clean-area-time">不要なもの1つ捨てる</div></div>
+      <div class="clean-area-item" onclick="selectCleanArea(this, 'クローゼット・引き出し')"><div class="clean-area-icon">👔</div><div class="clean-area-name">クローゼット・引き出し</div><div class="clean-area-time">着ない服を1枚手放す</div></div>
+      <div class="clean-area-item" onclick="selectCleanArea(this, '車の中')"><div class="clean-area-icon">🚗</div><div class="clean-area-name">車の中</div><div class="clean-area-time">ゴミ捨て・車内拭き</div></div>
+      <div class="clean-area-item" onclick="selectCleanArea(this, '洗面台周り')"><div class="clean-area-icon">🪥</div><div class="clean-area-name">洗面台周り</div><div class="clean-area-time">自分が使う範囲だけ</div></div>
+      <div class="clean-area-item" onclick="selectCleanArea(this, '窓・サッシ')"><div class="clean-area-icon">🪟</div><div class="clean-area-name">窓・サッシ</div><div class="clean-area-time">乾拭き1枚でOK</div></div>
+    </div>
+    <div class="clean-declare" id="cleanDeclare">↑ 今週のエリアを選ぶ</div>
+    <div style="font-family:'Space Mono',monospace; font-size:10px; letter-spacing:2px; color:var(--cool); text-transform:uppercase; margin-bottom:10px;">鉄則 — 掃除苦手勢のルール</div>
+    <div class="clean-rule">
+      <div class="clean-rule-item"><span class="clean-rule-icon">⏱️</span><span><strong style="color:var(--cool);">5分タイマーをセット</strong>してから始める。鳴ったら終了でいい。「終わりが見える」から動ける。</span></div>
+      <div class="clean-rule-item"><span class="clean-rule-icon">🚫</span><span><strong style="color:var(--cool);">全部やろうとしない。</strong>汚れが軽いうちにこまめにやる方が結果的にラク。</span></div>
+      <div class="clean-rule-item"><span class="clean-rule-icon">📍</span><span><strong style="color:var(--cool);">掃除道具は出しっぱなし</strong>にする。収納すると「出す」一手間が億劫で結局やらない。</span></div>
+      <div class="clean-rule-item"><span class="clean-rule-icon">📦</span><span><strong style="color:var(--cool);">床にものを置かない</strong>のが最優先。これだけで掃除のハードルが激減する。</span></div>
+    </div>
+    <div style="font-family:'Space Mono',monospace; font-size:10px; letter-spacing:2px; color:var(--cool); text-transform:uppercase; margin-bottom:10px; margin-top:16px;">ついで掃除 — 毎日の流れに組み込む</div>
+    <div class="tsuide-list">
+      <div class="tsuide-item" data-key="tsuide_0" onclick="toggleTsuide(this)"><div class="tsuide-box"></div><span class="tsuide-label">🛁 風呂上がりついでに鏡を一拭き</span></div>
+      <div class="tsuide-item" data-key="tsuide_1" onclick="toggleTsuide(this)"><div class="tsuide-box"></div><span class="tsuide-label">🚗 乗車前に車内のゴミを1つ捨てる</span></div>
+      <div class="tsuide-item" data-key="tsuide_2" onclick="toggleTsuide(this)"><div class="tsuide-box"></div><span class="tsuide-label">🛏️ 起きたらベッドを整える（30秒）</span></div>
+    </div>
+    <div style="margin-top:14px; padding:10px 12px; background:rgba(34,211,238,0.05); border-radius:8px; border:1px solid rgba(34,211,238,0.1); font-size:11px; color:var(--text-dim); line-height:1.7;">
+      💡 掃除が苦手な人ほど「ためない」方がラク。汚れがたまってからやると心理的ハードルが跳ね上がる。
+    </div>
+  </div>
+
+  <div class="section-label" style="margin-top:48px;">Uniform</div>
+  <div class="uniform-box">
+    <div class="uniform-title">👕 通勤制服（判断ゼロ化）</div>
+    <div class="uniform-item"><span class="uniform-num">T</span><span><strong>黒 無地Tシャツ × 5枚</strong><br>ユニクロ エアリズムコットン ¥990 × 5 = ¥4,950<br>夏は1枚、冬はインナーとして通年使える</span></div>
+    <div class="uniform-item"><span class="uniform-num">P</span><span><strong>黒 ジョガーパンツ × 2本</strong><br>ユニクロ or GU ¥2,000 × 2 = ¥4,000<br>ストレッチで楽。見た目も崩れない</span></div>
+    <div class="uniform-item"><span class="uniform-num">+</span><span><strong>冬：黒ジップパーカー</strong>（手持ちでOK）<br><strong>靴：黒スニーカー</strong>（手持ちでOK）</span></div>
+    <div style="margin-top:14px; padding-top:14px; border-top:1px solid rgba(251,191,36,0.15); font-family:'Space Mono',monospace; font-size:13px; color:var(--morning); font-weight:700;">合計：約 ¥9,000</div>
+    <div style="font-size:12px; color:var(--text-dim); margin-top:6px;">全部黒で統一 → 組み合わせを考える必要ゼロ。洗濯もまとめて回せる。</div>
+  </div>
+
+  <div class="footer">特別なことはしない。シンプルを、徹底するだけ。</div>
+</div>
+
+<script>
+// ============================================================
+// 日付管理・自動リセット
+// ============================================================
+const TODAY_KEY = 'routine_date';
+// 🔧修正: 週次の掃除エリアは別管理（月曜リセット）
+const WEEK_KEY = 'routine_week';
+
+function getTodayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// 🔧追加: ISO週番号を取得（週次リセット用）
+function getWeekStr() {
+  const d = new Date();
+  const onejan = new Date(d.getFullYear(), 0, 1);
+  const week = Math.ceil(((d - onejan) / 86400000 + onejan.getDay() + 1) / 7);
+  return `${d.getFullYear()}-W${week}`;
+}
+
+function showDate() {
+  const d = new Date();
+  const days = ['日','月','火','水','木','金','土'];
+  document.getElementById('dateBar').textContent =
+    `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${days[d.getDay()]}）`;
+}
+
+function checkDayReset() {
+  const saved = localStorage.getItem(TODAY_KEY);
+  const today = getTodayStr();
+  if (saved !== today) {
+    // 🔧修正: 日次リセット対象のみ（clean_selectは週次なので除外）
+    const dailyResetKeys = [
+      'check_0','check_1','check_2',
+      'bath_0','bath_1','bath_2',
+      'cool_0','cool_1','cool_2','cool_3',
+      'tsuide_0','tsuide_1','tsuide_2',
+      'body_select','invest_select','with_select'
+    ];
+    dailyResetKeys.forEach(k => localStorage.removeItem(k));
+    localStorage.setItem(TODAY_KEY, today);
+  }
+
+  // 🔧追加: 週次リセット（掃除エリア）
+  const savedWeek = localStorage.getItem(WEEK_KEY);
+  const currentWeek = getWeekStr();
+  if (savedWeek !== currentWeek) {
+    localStorage.removeItem('clean_select');
+    localStorage.setItem(WEEK_KEY, currentWeek);
+  }
+}
+
+// ============================================================
+// 状態の保存・復元
+// ============================================================
+function saveState(key, value) {
+  localStorage.setItem(key, value);
+}
+
+function loadState(key) {
+  return localStorage.getItem(key);
+}
+
+function restoreAll() {
+  // 🔧修正: 汎用的なチェック復元関数（boxClassを引数で受け取る）
+  restoreCheckItems('.check-item', '.check-box');
+  restoreCheckItems('.bath-item', '.bath-box');
+  restoreCheckItems('.cool-item', '.cool-box');
+  restoreCheckItems('.tsuide-item', '.tsuide-box');
+
+  // 筋トレ選択
+  const bodyVal = loadState('body_select');
+  if (bodyVal) {
+    document.querySelectorAll('.body-item').forEach(el => {
+      if (el.getAttribute('data-val') === bodyVal) el.classList.add('selected');
+    });
+  }
+
+  // 自己投資選択
+  const investVal = loadState('invest_select');
+  if (investVal) {
+    document.querySelectorAll('.invest-item').forEach(el => {
+      if (el.getAttribute('data-label') === investVal) {
+        el.classList.add('selected');
+        document.getElementById('investDeclare').textContent = '✅ 今日は「' + investVal + '」';
+      }
+    });
+  }
+
+  // with選択
+  const withVal = loadState('with_select');
+  if (withVal) {
+    document.querySelectorAll('.with-option').forEach(el => {
+      if (el.getAttribute('data-val') === withVal) {
+        el.classList.add('selected');
+        const mins = parseInt(withVal);
+        const bonus = mins === 0 ? ' → 自己投資 +60分' : mins === 30 ? ' → 自己投資 +30分' : '';
+        const labels = {'60':'60分集中で運用する','30':'30分サクッと見る','0':'今日はスキップ。自己投資に全振り'};
+        document.getElementById('withResult').textContent = '✅ ' + (labels[withVal] || '') + bonus;
+      }
+    });
+  }
+
+  // 掃除エリア（週次管理）
+  const cleanVal = loadState('clean_select');
+  if (cleanVal) {
+    document.querySelectorAll('.clean-area-item').forEach(el => {
+      const name = el.querySelector('.clean-area-name').textContent;
+      if (name === cleanVal) {
+        el.classList.add('selected');
+        document.getElementById('cleanDeclare').textContent = '✅ 今週は「' + cleanVal + '」を5分やる';
+      }
+    });
+  }
+}
+
+// 🔧修正: restoreChecks → restoreCheckItems に統一。boxSelectorを正しく使う
+function restoreCheckItems(itemSelector, boxSelector) {
+  document.querySelectorAll(itemSelector).forEach(el => {
+    const key = el.getAttribute('data-key');
+    if (key && loadState(key) === '1') {
+      el.classList.add('done');
+      const box = el.querySelector(boxSelector);
+      if (box) box.textContent = '✓';
+    }
+  });
+}
+
+// ============================================================
+// チェック操作
+// ============================================================
+function toggleCheck(el) {
+  el.classList.toggle('done');
+  const isDone = el.classList.contains('done');
+  el.querySelector('.check-box').textContent = isDone ? '✓' : '';
+  saveState(el.getAttribute('data-key'), isDone ? '1' : '0');
+}
+
+function toggleBath(el) {
+  el.classList.toggle('done');
+  const isDone = el.classList.contains('done');
+  el.querySelector('.bath-box').textContent = isDone ? '✓' : '';
+  saveState(el.getAttribute('data-key'), isDone ? '1' : '0');
+}
+
+function toggleCool(el) {
+  el.classList.toggle('done');
+  const isDone = el.classList.contains('done');
+  el.querySelector('.cool-box').textContent = isDone ? '✓' : '';
+  saveState(el.getAttribute('data-key'), isDone ? '1' : '0');
+}
+
+function toggleTsuide(el) {
+  el.classList.toggle('done');
+  const isDone = el.classList.contains('done');
+  el.querySelector('.tsuide-box').textContent = isDone ? '✓' : '';
+  saveState(el.getAttribute('data-key'), isDone ? '1' : '0');
+}
+
+function selectBody(el) {
+  document.querySelectorAll('.body-item').forEach(i => i.classList.remove('selected'));
+  el.classList.add('selected');
+  saveState('body_select', el.getAttribute('data-val'));
+}
+
+function selectInvest(el) {
+  document.querySelectorAll('.invest-item').forEach(i => i.classList.remove('selected'));
+  el.classList.add('selected');
+  const label = el.getAttribute('data-label');
+  document.getElementById('investDeclare').textContent = '✅ 今日は「' + label + '」';
+  saveState('invest_select', label);
+}
+
+function selectCleanArea(el, label) {
+  document.querySelectorAll('.clean-area-item').forEach(i => i.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('cleanDeclare').textContent = '✅ 今週は「' + label + '」を5分やる';
+  saveState('clean_select', label);
+}
+
+function selectWith(el, mins, label) {
+  document.querySelectorAll('.with-option').forEach(i => i.classList.remove('selected'));
+  el.classList.add('selected');
+  const bonus = mins === 0 ? ' → 自己投資 +60分' : mins === 30 ? ' → 自己投資 +30分' : '';
+  document.getElementById('withResult').textContent = '✅ ' + label + bonus;
+  saveState('with_select', String(mins));
+}
+
+// ============================================================
+// 手動リセット
+// ============================================================
+function resetAll() {
+  if (!confirm('今日のチェックをすべてリセットしますか？')) return;
+  const resetKeys = [
+    'check_0','check_1','check_2',
+    'bath_0','bath_1','bath_2',
+    'cool_0','cool_1','cool_2','cool_3',
+    'tsuide_0','tsuide_1','tsuide_2',
+    'body_select','invest_select','with_select'
+  ];
+  resetKeys.forEach(k => localStorage.removeItem(k));
+
+  // 🔧修正: 各チェック要素を個別に正しくリセット
+  document.querySelectorAll('.check-item').forEach(el => {
+    el.classList.remove('done');
+    const box = el.querySelector('.check-box');
+    if (box) box.textContent = '';
+  });
+  document.querySelectorAll('.bath-item').forEach(el => {
+    el.classList.remove('done');
+    const box = el.querySelector('.bath-box');
+    if (box) box.textContent = '';
+  });
+  document.querySelectorAll('.cool-item').forEach(el => {
+    el.classList.remove('done');
+    const box = el.querySelector('.cool-box');
+    if (box) box.textContent = '';
+  });
+  document.querySelectorAll('.tsuide-item').forEach(el => {
+    el.classList.remove('done');
+    const box = el.querySelector('.tsuide-box');
+    if (box) box.textContent = '';
+  });
+
+  document.querySelectorAll('.body-item,.invest-item,.with-option').forEach(el => el.classList.remove('selected'));
+  document.getElementById('investDeclare').textContent = '↑ 今日やることを選んでから席に座る';
+  document.getElementById('withResult').textContent = '↑ 今日の with モードを選ぶ';
+}
+
+// ============================================================
+// 通知
+// ============================================================
+const NOTIFY_SCHEDULES = [
+  { hour: 6,  min: 0,  title: '☀️ おはよう', body: '余白の30分。コーヒーでぼーっとする時間。' },
+  { hour: 19, min: 0,  title: '💪 筋トレの時間', body: '1種目だけ選んでやる。考えない。' },
+  { hour: 19, min: 30, title: '🛁 風呂の時間', body: '上がったらその場でケアまで完結。' },
+  { hour: 20, min: 0,  title: '🔧 自己投資タイム', body: '座る前に今日やることを1つ選ぶ。' },
+  { hour: 22, min: 0,  title: '🌙 クールダウン', body: '明日のこと1つ決めて、スマホ離脱。' },
+  { hour: 22, min: 30, title: '😴 就寝の時間', body: '睡眠7h。これが全ての土台。' },
+];
+
+// 🔧修正: 通知タイマーIDを保持して重複防止
+let notifyTimers = [];
+
+function requestNotify() {
+  if (!('Notification' in window)) {
+    alert('このブラウザは通知に対応していません。');
+    return;
+  }
+  Notification.requestPermission().then(perm => {
+    if (perm === 'granted') {
+      localStorage.setItem('notify_on', '1');
+      document.getElementById('notifyBtn').textContent = '🔔 通知ON';
+      document.getElementById('notifyBtn').classList.add('active');
+      scheduleNotifications();
+      // 🔧修正: テスト通知を送って確認
+      new Notification('✅ 通知ON', { body: 'ルーティンの時間にお知らせします。', icon: 'icon-192.png' });
+    } else {
+      alert('通知が許可されませんでした。\\nブラウザ設定から通知を許可してください。');
+    }
+  });
+}
+
+function scheduleNotifications() {
+  // 🔧修正: 既存のタイマーをクリアして重複防止
+  notifyTimers.forEach(id => clearTimeout(id));
+  notifyTimers = [];
+
+  const now = new Date();
+  NOTIFY_SCHEDULES.forEach(s => {
+    const target = new Date();
+    target.setHours(s.hour, s.min, 0, 0);
+    const diff = target - now;
+    if (diff > 0) {
+      const id = setTimeout(() => {
+        if (Notification.permission === 'granted') {
+          new Notification(s.title, { body: s.body, icon: 'icon-192.png' });
+        }
+      }, diff);
+      notifyTimers.push(id);
+    }
+  });
+}
+
+function restoreNotifyBtn() {
+  if (localStorage.getItem('notify_on') === '1') {
+    // 🔧修正: Notification APIの存在チェック追加
+    if ('Notification' in window && Notification.permission === 'granted') {
+      document.getElementById('notifyBtn').textContent = '🔔 通知ON';
+      document.getElementById('notifyBtn').classList.add('active');
+      scheduleNotifications();
+    } else {
+      // 権限がリセットされた場合
+      localStorage.removeItem('notify_on');
+    }
+  }
+}
+
+// ============================================================
+// 🔧追加: ページ可視性変更時の日付チェック
+// （タブを開きっぱなしで日付が変わった場合に対応）
+// ============================================================
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') {
+    const saved = localStorage.getItem(TODAY_KEY);
+    const today = getTodayStr();
+    if (saved !== today) {
+      checkDayReset();
+      // UIをリロードして反映
+      location.reload();
+    }
+    showDate();
+    // 通知タイマーを再スケジュール
+    if (localStorage.getItem('notify_on') === '1' && 'Notification' in window && Notification.permission === 'granted') {
+      scheduleNotifications();
+    }
+  }
+});
+
+// ============================================================
+// Service Worker 登録
+// ============================================================
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js')
+    .then(reg => console.log('SW registered:', reg.scope))
+    .catch(err => console.warn('SW registration failed:', err));
+}
+
+// ============================================================
+// 初期化
+// ============================================================
+showDate();
+checkDayReset();
+restoreAll();
+restoreNotifyBtn();
+</script>
+</body>
+</html>
