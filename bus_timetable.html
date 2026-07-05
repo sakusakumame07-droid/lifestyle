@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>次のバス</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", sans-serif;
+    background: #f4f3ef;
+    color: #1a1a18;
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px;
+    max-width: 480px;
+    margin: 0 auto;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+  .tabs button, select, .daybtn {
+    font-family: inherit;
+    font-size: 14px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #d8d6cd;
+    background: #fff;
+    color: #1a1a18;
+  }
+  .tabs button { flex: 1; }
+  .tabs button.active, .daybtn.active {
+    background: #eadfd4;
+    border-color: #b5906a;
+    color: #6b3f1d;
+  }
+  .row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .row select { flex: 1; }
+  .daytype {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+    background: #f4f3ef; border-radius: 8px; padding: 8px 12px; margin-bottom: 16px; gap: 8px 12px;
+  }
+  .daytype span { font-size: 13px; color: #55534c; flex: 1 1 140px; min-width: 0; }
+  .daybtns { display: flex; gap: 4px; flex-shrink: 0; }
+  .daybtn { white-space: nowrap; }
+  .result { background: #f4f3ef; border-radius: 12px; padding: 20px; }
+  .stopname { font-size: 13px; color: #55534c; margin-bottom: 4px; }
+  .nexttime { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; }
+  .nexttime .time { font-family: "SF Mono", Menlo, monospace; font-size: 40px; font-weight: 600; letter-spacing: 1px; }
+  .nexttime .countdown { font-size: 14px; color: #a8571f; }
+  .nobus { font-size: 13px; color: #8a8880; }
+  .upcoming { border-top: 1px solid #ddd; margin-top: 14px; padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .upcoming div { display: flex; justify-content: space-between; font-size: 14px; color: #55534c; }
+  .note { font-size: 12px; color: #8a8880; margin-top: 10px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="tabs" id="routeTabs"></div>
+  <div class="row">
+    <select id="dirSelect"></select>
+    <select id="stopSelect"></select>
+  </div>
+  <div class="daytype">
+    <span id="dayTypeLabel">今日は平日ダイヤ</span>
+    <div class="daybtns">
+      <button class="daybtn" id="btnAuto">自動</button>
+      <button class="daybtn" id="btnWeekday">平日</button>
+      <button class="daybtn" id="btnWeekend">土休日</button>
+    </div>
+  </div>
+  <div class="result">
+    <div class="stopname" id="stopNameLabel">停留所</div>
+    <div class="nexttime">
+      <div class="time" id="nextTime">--:--</div>
+      <div class="countdown" id="nextCountdown"></div>
+    </div>
+    <div class="nobus" id="noBusMsg"></div>
+    <div class="upcoming" id="upcomingList"></div>
+  </div>
+  <div class="note">2026年祝日・お盆(8/13〜8/15)・年末年始(12/29〜1/3)を自動判定。天伯団地線・西口線 / 豊橋駅前④番のりば</div>
+</div>
+<script>
+(function(){
+var HOLIDAYS_2026 = ["2026-01-01","2026-01-12","2026-02-11","2026-02-23","2026-03-20","2026-04-29","2026-05-03","2026-05-04","2026-05-05","2026-05-06","2026-07-20","2026-08-11","2026-09-21","2026-09-22","2026-09-23","2026-10-12","2026-11-03","2026-11-23"];
+
+var DATA = {
+  tenpaku: {
+    name: "天伯団地線",
+    weekday: {
+      out: {
+        stops: ["豊橋駅前","新川","台町","つつじが丘一丁目","山田三番町","江島町","西幸","藤並","サイエンスコア入口","天伯団地入口","天伯団地"],
+        rows: [
+          "6:57,7:01,7:06,7:09,7:12,7:14,7:16,7:18,7:20,7:21,7:26",
+          "8:07,8:11,8:17,8:20,8:23,8:25,8:27,8:29,8:31,8:32,8:40",
+          "9:02,9:06,9:12,9:15,9:18,9:20,9:22,9:24,9:26,9:27,9:32",
+          "10:02,10:06,10:12,10:15,10:18,10:20,10:22,10:24,10:26,10:27,10:32",
+          "11:02,11:06,11:12,11:15,11:18,11:20,11:22,11:24,11:26,11:27,11:32",
+          "12:02,12:06,12:12,12:15,12:18,12:20,12:22,12:24,12:26,12:27,12:32",
+          "13:02,13:06,13:12,13:15,13:18,13:20,13:22,13:24,13:26,13:27,13:32",
+          "14:02,14:06,14:12,14:15,14:18,14:20,14:22,14:24,14:26,14:27,14:32",
+          "15:02,15:06,15:12,15:15,15:18,15:20,15:22,15:24,15:26,15:27,15:32",
+          "16:02,16:06,16:12,16:15,16:18,16:20,16:22,16:24,16:26,16:27,16:32",
+          "17:02,17:06,17:12,17:15,17:18,17:20,17:22,17:24,17:26,17:27,17:35",
+          "18:02,18:06,18:12,18:15,18:18,18:20,18:22,18:24,18:26,18:27,18:35",
+          "19:02,19:06,19:12,19:15,19:18,19:20,19:22,19:24,19:26,19:27,19:32",
+          "20:02,20:06,20:11,20:14,20:17,20:19,20:21,20:23,20:25,20:26,20:31"
+        ]
+      },
+      in: {
+        stops: ["天伯団地","天伯団地入口","サイエンスコア入口","藤並","西幸","江島町","山田三番町","つつじが丘一丁目","台町","新川","豊橋駅前"],
+        rows: [
+          "6:20,6:21,6:22,6:23,6:26,6:28,6:30,6:33,6:36,6:40,6:47",
+          "6:55,6:56,6:57,6:58,7:01,7:03,7:05,7:08,7:11,7:15,7:25",
+          "7:35,7:36,7:37,7:38,7:41,7:43,7:45,7:48,7:51,7:55,8:05",
+          "8:50,8:51,8:52,8:53,8:56,8:58,9:00,9:03,9:06,9:10,9:17",
+          "9:50,9:51,9:52,9:53,9:56,9:58,10:00,10:03,10:06,10:10,10:17",
+          "10:50,10:51,10:52,10:53,10:56,10:58,11:00,11:03,11:06,11:10,11:17",
+          "11:50,11:51,11:52,11:53,11:56,11:58,12:00,12:03,12:06,12:10,12:17",
+          "12:50,12:51,12:52,12:53,12:56,12:58,13:00,13:03,13:06,13:10,13:17",
+          "13:50,13:51,13:52,13:53,13:56,13:58,14:00,14:03,14:06,14:10,14:17",
+          "14:50,14:51,14:52,14:53,14:56,14:58,15:00,15:03,15:06,15:10,15:17",
+          "15:50,15:51,15:52,15:53,15:56,15:58,16:00,16:03,16:06,16:10,16:17",
+          "16:50,16:51,16:52,16:53,16:56,16:58,17:00,17:03,17:06,17:10,17:17",
+          "17:50,17:51,17:52,17:53,17:56,17:58,18:00,18:03,18:06,18:10,18:20",
+          "18:50,18:51,18:52,18:53,18:56,18:58,19:00,19:03,19:06,19:10,19:20"
+        ]
+      }
+    },
+    weekend: {
+      out: {
+        stops: ["豊橋駅前","新川","台町","つつじが丘一丁目","山田三番町","江島町","西幸","藤並","サイエンスコア入口","天伯団地入口","天伯団地"],
+        rows: [
+          "8:00,8:04,8:10,8:13,8:16,8:18,8:20,8:22,8:23,8:25,8:30",
+          "9:02,9:06,9:12,9:15,9:18,9:20,9:22,9:24,9:25,9:27,9:32",
+          "10:02,10:06,10:12,10:15,10:18,10:20,10:22,10:24,10:25,10:27,10:32",
+          "11:02,11:06,11:12,11:15,11:18,11:20,11:22,11:24,11:25,11:27,11:32",
+          "12:02,12:06,12:12,12:15,12:18,12:20,12:22,12:24,12:25,12:27,12:32",
+          "13:02,13:06,13:12,13:15,13:18,13:20,13:22,13:24,13:25,13:27,13:32",
+          "14:02,14:06,14:12,14:15,14:18,14:20,14:22,14:24,14:25,14:27,14:32",
+          "15:02,15:06,15:12,15:15,15:18,15:20,15:22,15:24,15:25,15:27,15:32",
+          "16:02,16:06,16:12,16:15,16:18,16:20,16:22,16:24,16:25,16:27,16:32",
+          "17:02,17:06,17:12,17:15,17:18,17:20,17:22,17:24,17:25,17:27,17:32",
+          "18:02,18:06,18:12,18:15,18:18,18:20,18:22,18:24,18:25,18:27,18:32",
+          "19:02,19:06,19:12,19:15,19:18,19:20,19:22,19:24,19:25,19:27,19:32",
+          "20:02,20:06,20:11,20:14,20:17,20:19,20:21,20:23,20:24,20:26,20:31"
+        ]
+      },
+      in: {
+        stops: ["天伯団地","天伯団地入口","サイエンスコア入口","藤並","西幸","江島町","山田三番町","つつじが丘一丁目","台町","新川","豊橋駅前"],
+        rows: [
+          "6:30,6:31,6:32,6:33,6:36,6:38,6:40,6:43,6:46,6:50,6:57",
+          "7:20,7:21,7:22,7:23,7:26,7:28,7:30,7:33,7:36,7:40,7:47",
+          "8:40,8:41,8:42,8:43,8:46,8:48,8:50,8:53,8:56,9:00,9:07",
+          "9:45,9:46,9:47,9:48,9:51,9:53,9:55,9:58,10:01,10:05,10:12",
+          "10:45,10:46,10:47,10:48,10:51,10:53,10:55,10:58,11:01,11:05,11:12",
+          "11:45,11:46,11:47,11:48,11:51,11:53,11:55,11:58,12:01,12:05,12:12",
+          "12:45,12:46,12:47,12:48,12:51,12:53,12:55,12:58,13:01,13:05,13:12",
+          "13:45,13:46,13:47,13:48,13:51,13:53,13:55,13:58,14:01,14:05,14:12",
+          "14:45,14:46,14:47,14:48,14:51,14:53,14:55,14:58,15:01,15:05,15:12",
+          "15:45,15:46,15:47,15:48,15:51,15:53,15:55,15:58,16:01,16:05,16:12",
+          "16:45,16:46,16:47,16:48,16:51,16:53,16:55,16:58,17:01,17:05,17:12",
+          "17:50,17:51,17:52,17:53,17:56,17:58,18:00,18:03,18:06,18:10,18:17",
+          "18:50,18:51,18:52,18:53,18:56,18:58,19:00,19:03,19:06,19:10,19:17"
+        ]
+      }
+    }
+  },
+  nishiguchi: {
+    name: "西口線",
+    weekday: {
+      out: {
+        stops: ["豊橋駅前","前田二丁目","台町","才ノ神","佐藤西","西口"],
+        rows: [
+          "7:00,7:07,7:10,7:13,7:16,7:21","7:20,7:27,7:30,7:33,7:36,7:41","7:40,7:47,7:50,7:53,7:56,8:01",
+          "8:00,8:07,8:10,8:13,8:16,8:21","8:20,8:27,8:30,8:33,8:36,8:41","8:40,8:47,8:50,8:53,8:56,9:01",
+          "9:10,9:17,9:20,9:23,9:26,9:31","9:40,9:47,9:50,9:53,9:56,10:01","10:15,10:22,10:25,10:28,10:31,10:36",
+          "10:45,10:52,10:55,10:58,11:01,11:06","11:15,11:22,11:25,11:28,11:31,11:36","11:45,11:52,11:55,11:58,12:01,12:06",
+          "12:15,12:22,12:25,12:28,12:31,12:36","12:45,12:52,12:55,12:58,13:01,13:06","13:15,13:22,13:25,13:28,13:31,13:36",
+          "13:45,13:52,13:55,13:58,14:01,14:06","14:15,14:22,14:25,14:28,14:31,14:36","14:45,14:52,14:55,14:58,15:01,15:06",
+          "15:15,15:22,15:25,15:28,15:31,15:36","15:45,15:52,15:55,15:58,16:01,16:06","16:15,16:22,16:25,16:28,16:31,16:36",
+          "16:45,16:52,16:55,16:58,17:01,17:06","17:15,17:22,17:25,17:28,17:31,17:39","17:45,17:52,17:55,17:58,18:01,18:09",
+          "18:15,18:22,18:25,18:28,18:31,18:39","18:45,18:52,18:55,18:58,19:01,19:09","19:15,19:22,19:25,19:28,19:31,19:36",
+          "19:45,19:52,19:55,19:58,20:01,20:06","20:15,20:21,20:24,20:27,20:30,20:35","20:45,20:51,20:54,20:57,21:00,21:05",
+          "21:10,21:17,21:20,21:23,21:26,21:31","21:35,21:41,21:44,21:47,21:50,21:55"
+        ]
+      },
+      in: {
+        stops: ["西口","佐藤西","才ノ神","台町","前田二丁目","豊橋駅前"],
+        rows: [
+          "6:00,6:03,6:08,6:11,6:13,6:21","6:26,6:29,6:34,6:37,6:39,6:47","6:46,6:49,6:54,6:57,6:59,7:07",
+          "7:06,7:09,7:14,7:17,7:19,7:30","7:26,7:29,7:34,7:37,7:39,7:50","7:46,7:49,7:54,7:57,7:59,8:10",
+          "8:06,8:09,8:14,8:17,8:19,8:30","8:26,8:29,8:34,8:37,8:39,8:50","8:46,8:49,8:54,8:57,8:59,9:07",
+          "9:11,9:14,9:19,9:22,9:24,9:32","9:41,9:44,9:49,9:52,9:54,10:02","10:11,10:14,10:19,10:22,10:24,10:32",
+          "10:41,10:44,10:49,10:52,10:54,11:02","11:11,11:14,11:19,11:22,11:24,11:32","11:41,11:44,11:49,11:52,11:54,12:02",
+          "12:11,12:14,12:19,12:22,12:24,12:32","12:41,12:44,12:49,12:52,12:54,13:02","13:11,13:14,13:19,13:22,13:24,13:32",
+          "13:41,13:44,13:49,13:52,13:54,14:02","14:11,14:14,14:19,14:22,14:24,14:32","14:41,14:44,14:49,14:52,14:54,15:02",
+          "15:11,15:14,15:19,15:22,15:24,15:32","15:41,15:44,15:49,15:52,15:54,16:02","16:11,16:14,16:19,16:22,16:24,16:32",
+          "16:26,16:29,16:34,16:37,16:39,16:47","16:41,16:44,16:49,16:52,16:54,17:02","17:11,17:14,17:19,17:22,17:24,17:35",
+          "17:44,17:47,17:52,17:55,17:57,18:08","18:14,18:17,18:22,18:25,18:27,18:38","18:44,18:47,18:52,18:55,18:57,19:08",
+          "19:14,19:17,19:22,19:25,19:27,19:35","19:41,19:44,19:49,19:52,19:54,20:02","20:11,20:14,20:19,20:22,20:24,20:32",
+          "20:40,20:43,20:48,20:51,20:53,21:01","21:10,21:13,21:18,21:21,21:23,21:31"
+        ]
+      }
+    },
+    weekend: {
+      out: {
+        stops: ["豊橋駅前","前田二丁目","台町","才ノ神","佐藤西","西口"],
+        rows: [
+          "7:04,7:11,7:14,7:17,7:20,7:25","7:40,7:47,7:50,7:53,7:56,8:01","8:15,8:22,8:25,8:28,8:31,8:36",
+          "8:45,8:52,8:55,8:58,9:01,9:06","9:15,9:22,9:25,9:28,9:31,9:36","9:45,9:52,9:55,9:58,10:01,10:06",
+          "10:15,10:22,10:25,10:28,10:31,10:36","10:45,10:52,10:55,10:58,11:01,11:06","11:15,11:22,11:25,11:28,11:31,11:36",
+          "11:45,11:52,11:55,11:58,12:01,12:06","12:15,12:22,12:25,12:28,12:31,12:36","12:45,12:52,12:55,12:58,13:01,13:06",
+          "13:15,13:22,13:25,13:28,13:31,13:36","13:45,13:52,13:55,13:58,14:01,14:06","14:15,14:22,14:25,14:28,14:31,14:36",
+          "14:45,14:52,14:55,14:58,15:01,15:06","15:15,15:22,15:25,15:28,15:31,15:36","15:45,15:52,15:55,15:58,16:01,16:06",
+          "16:15,16:22,16:25,16:28,16:31,16:36","16:45,16:52,16:55,16:58,17:01,17:06","17:15,17:22,17:25,17:28,17:31,17:39",
+          "17:45,17:52,17:55,17:58,18:01,18:09","18:15,18:22,18:25,18:28,18:31,18:39","18:45,18:52,18:55,18:58,19:01,19:09",
+          "19:15,19:22,19:25,19:28,19:31,19:36","19:45,19:52,19:55,19:58,20:01,20:06","20:15,20:21,20:24,20:27,20:30,20:35",
+          "20:45,20:51,20:54,20:57,21:00,21:05","21:15,21:21,21:24,21:27,21:30,21:35"
+        ]
+      },
+      in: {
+        stops: ["西口","佐藤西","才ノ神","台町","前田二丁目","豊橋駅前"],
+        rows: [
+          "6:20,6:23,6:28,6:31,6:33,6:41","7:00,7:03,7:08,7:11,7:13,7:21","7:30,7:33,7:38,7:41,7:43,7:51",
+          "8:06,8:09,8:14,8:17,8:19,8:27","8:41,8:44,8:49,8:52,8:54,9:02","9:11,9:14,9:19,9:22,9:24,9:32",
+          "9:41,9:44,9:49,9:52,9:54,10:02","10:11,10:14,10:19,10:22,10:24,10:32","10:41,10:44,10:49,10:52,10:54,11:02",
+          "11:11,11:14,11:19,11:22,11:24,11:32","11:41,11:44,11:49,11:52,11:54,12:02","12:11,12:14,12:19,12:22,12:24,12:32",
+          "12:41,12:44,12:49,12:52,12:54,13:02","13:11,13:14,13:19,13:22,13:24,13:32","13:41,13:44,13:49,13:52,13:54,14:02",
+          "14:11,14:14,14:19,14:22,14:24,14:32","14:41,14:44,14:49,14:52,14:54,15:02","15:11,15:14,15:19,15:22,15:24,15:32",
+          "15:41,15:44,15:49,15:52,15:54,16:02","16:11,16:14,16:19,16:22,16:24,16:32","16:41,16:44,16:49,16:52,16:54,17:02",
+          "17:11,17:14,17:19,17:22,17:24,17:32","17:44,17:47,17:52,17:55,17:57,18:05","18:14,18:17,18:22,18:25,18:27,18:35",
+          "18:44,18:47,18:52,18:55,18:57,19:05","19:14,19:17,19:22,19:25,19:27,19:35","19:41,19:44,19:49,19:52,19:54,20:02",
+          "20:11,20:14,20:19,20:22,20:24,20:32","20:40,20:43,20:48,20:51,20:53,21:01"
+        ]
+      }
+    }
+  }
+};
+
+function parseRows(rowsArr){ return rowsArr.map(function(r){ return r.split(","); }); }
+
+var state = { route:"tenpaku", dir:"out", stopIdx:0, dayMode:"auto" };
+
+function toISODate(d){
+  var y=d.getFullYear(), m=("0"+(d.getMonth()+1)).slice(-2), dd=("0"+d.getDate()).slice(-2);
+  return y+"-"+m+"-"+dd;
+}
+function isWeekendToday(){
+  var d = new Date();
+  var day = d.getDay();
+  var m = d.getMonth()+1, dt = d.getDate();
+  var isObon = (m===8 && dt>=13 && dt<=15);
+  var isNY = (m===12 && dt>=29) || (m===1 && dt<=3);
+  var isHoliday = HOLIDAYS_2026.indexOf(toISODate(d)) !== -1;
+  return day===0 || day===6 || isObon || isNY || isHoliday;
+}
+function effectiveDayType(){
+  if(state.dayMode==="weekday") return "weekday";
+  if(state.dayMode==="weekend") return "weekend";
+  return isWeekendToday() ? "weekend" : "weekday";
+}
+function toMinutes(t){ var p = t.split(":"); return parseInt(p[0])*60+parseInt(p[1]); }
+
+function renderRouteTabs(){
+  var el = document.getElementById("routeTabs");
+  el.innerHTML = "";
+  ["tenpaku","nishiguchi"].forEach(function(r){
+    var b = document.createElement("button");
+    b.textContent = DATA[r].name;
+    if(state.route===r) b.className = "active";
+    b.onclick = function(){ state.route = r; state.dir="out"; state.stopIdx=0; renderAll(); };
+    el.appendChild(b);
+  });
+}
+function renderSelectors(){
+  var dirSel = document.getElementById("dirSelect");
+  var stopSel = document.getElementById("stopSelect");
+  var routeData = DATA[state.route];
+  var dayType = effectiveDayType();
+  var outStops = routeData[dayType].out.stops;
+  var inStops = routeData[dayType].in.stops;
+  dirSel.innerHTML = "<option value='out'>"+outStops[0]+"→"+outStops[outStops.length-1]+"</option><option value='in'>"+inStops[0]+"→"+inStops[inStops.length-1]+"</option>";
+  dirSel.value = state.dir;
+  dirSel.onchange = function(){ state.dir = dirSel.value; state.stopIdx=0; renderAll(); };
+  var stops = routeData[dayType][state.dir].stops;
+  stopSel.innerHTML = stops.map(function(s,i){ return "<option value='"+i+"'>"+s+"</option>"; }).join("");
+  if(state.stopIdx >= stops.length) state.stopIdx = 0;
+  stopSel.value = state.stopIdx;
+  stopSel.onchange = function(){ state.stopIdx = parseInt(stopSel.value); renderAll(); };
+}
+function renderDayTypeUI(){
+  var dayType = effectiveDayType();
+  var label = document.getElementById("dayTypeLabel");
+  var autoIsWeekend = isWeekendToday();
+  if(state.dayMode==="auto"){
+    label.textContent = "今日は" + (autoIsWeekend ? "土休日ダイヤ（自動判定）" : "平日ダイヤ（自動判定）");
+  } else {
+    label.textContent = (dayType==="weekend" ? "土休日ダイヤ" : "平日ダイヤ") + "（手動指定）";
+  }
+  [["btnAuto","auto"],["btnWeekday","weekday"],["btnWeekend","weekend"]].forEach(function(pair){
+    var b = document.getElementById(pair[0]);
+    b.className = state.dayMode===pair[1] ? "daybtn active" : "daybtn";
+  });
+}
+function renderResult(){
+  var dayType = effectiveDayType();
+  var routeData = DATA[state.route];
+  var stops = routeData[dayType][state.dir].stops;
+  var rows = parseRows(routeData[dayType][state.dir].rows);
+  document.getElementById("stopNameLabel").textContent = stops[state.stopIdx];
+  var now = new Date();
+  var nowMin = now.getHours()*60 + now.getMinutes();
+  var times = rows.map(function(r){ return r[state.stopIdx]; }).filter(Boolean);
+  var future = times.filter(function(t){ return toMinutes(t) >= nowMin; });
+  var nextTimeEl = document.getElementById("nextTime");
+  var countdownEl = document.getElementById("nextCountdown");
+  var noBusEl = document.getElementById("noBusMsg");
+  var listEl = document.getElementById("upcomingList");
+  if(future.length===0){
+    nextTimeEl.textContent = "--:--";
+    countdownEl.textContent = "";
+    noBusEl.textContent = "本日の運行は終了しました";
+    listEl.innerHTML = "";
+    return;
+  }
+  noBusEl.textContent = "";
+  var next = future[0];
+  var diff = toMinutes(next) - nowMin;
+  nextTimeEl.textContent = next;
+  countdownEl.textContent = diff===0 ? "まもなく発車" : "あと" + diff + "分";
+  listEl.innerHTML = future.slice(1,4).map(function(t){
+    return "<div><span>"+t+"</span><span>あと"+(toMinutes(t)-nowMin)+"分</span></div>";
+  }).join("");
+}
+function renderAll(){ renderRouteTabs(); renderSelectors(); renderDayTypeUI(); renderResult(); }
+
+document.getElementById("btnAuto").onclick = function(){ state.dayMode="auto"; renderAll(); };
+document.getElementById("btnWeekday").onclick = function(){ state.dayMode="weekday"; renderAll(); };
+document.getElementById("btnWeekend").onclick = function(){ state.dayMode="weekend"; renderAll(); };
+
+renderAll();
+setInterval(renderResult, 30000);
+})();
+</script>
+</body>
+</html>
